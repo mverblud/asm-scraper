@@ -1,0 +1,136 @@
+{
+  "site": {
+    "name": "ASM – Autopartes San Martin",
+    "baseUrl": "https://autopartessanmartin.com.ar",
+    "platform": "WordPress + WooCommerce + Elementor + JetEngine + JetSmartFilters (Crocoblock)",
+    "lastVerified": "2026-03-25"
+  },
+  "login": {
+    "url": "https://autopartessanmartin.com.ar/cuenta/",
+    "selectors": {
+      "username": "getByRole('textbox', { name: 'Nombre de usuario o correo' })",
+      "password": "getByPlaceholder('Ingrese su contraseña')",
+      "submit": "getByRole('button', { name: 'Ingresar' })"
+    },
+    "authType": "form-cookie",
+    "postLogin": {
+      "redirect": "/cuenta/",
+      "verification": "Texto 'Hola {username}' o 'Cerrar sesión' o 'Salir' en el body",
+      "storage": "Cookies de sesión WooCommerce (wordpress_logged_in_*, woocommerce_*)"
+    }
+  },
+  "catalog": {
+    "url": "https://autopartessanmartin.com.ar/tienda/",
+    "requiresLogin": true
+  },
+  "search": {
+    "inputs": {
+      "advanced": {
+        "role": "searchbox",
+        "name": "Busqueda avanzada",
+        "description": "Búsqueda por texto libre (nombre, descripción, vehículo)"
+      },
+      "sku": {
+        "role": "searchbox",
+        "name": "Busqueda por SKU",
+        "description": "Búsqueda exacta por código de producto"
+      }
+    },
+    "filters": [
+      {
+        "index": 0,
+        "type": "select",
+        "name": "Categoría",
+        "role": "combobox",
+        "ariaName": "Filtros tipo select",
+        "placeholder": "Categoría",
+        "dataQueryVar": "product_cat",
+        "options": "65 categorías precargadas (BIELETAS, AMORTIGUADORES, AXIALES, etc.)",
+        "preloaded": true
+      },
+      {
+        "index": 1,
+        "type": "select",
+        "name": "Marca",
+        "role": "combobox",
+        "ariaName": "Filtros tipo select",
+        "placeholder": "Marca",
+        "dataQueryVar": "pa_marca-vehiculo",
+        "options": "Jerárquico: se carga al seleccionar Categoría",
+        "preloaded": false
+      },
+      {
+        "index": 2,
+        "type": "select",
+        "name": "Vehículo",
+        "role": "combobox",
+        "ariaName": "Filtros tipo select",
+        "placeholder": "Vehículo",
+        "dataQueryVar": "pa_vehiculo",
+        "options": "Jerárquico: se carga al seleccionar Marca",
+        "preloaded": false
+      },
+      {
+        "index": 3,
+        "type": "select",
+        "name": "Año",
+        "role": "combobox",
+        "ariaName": "Filtros tipo select",
+        "placeholder": "Año",
+        "dataQueryVar": "pa_ano",
+        "options": "Jerárquico: se carga al seleccionar Vehículo",
+        "preloaded": false
+      }
+    ],
+    "trigger": "button (hermano del searchbox) o Enter",
+    "requestDetected": {
+      "url": "https://autopartessanmartin.com.ar/wp-admin/admin-ajax.php",
+      "method": "POST",
+      "provider": "JetSmartFilters (Crocoblock)",
+      "responseFormat": "JSON: { content: HTML, pagination: { found_posts, max_num_pages, page } }",
+      "queryProvider": "jet-engine",
+      "listingId": "lista-productos",
+      "widgetId": 1798,
+      "postsPerPage": 12,
+      "searchButtonSelector": ".jet-search-filter[data-query-var='query'] button.jet-search-filter__submit",
+      "skuButtonSelector": ".jet-search-filter[data-query-var='codigo-producto'] button.jet-search-filter__submit"
+    }
+  },
+  "products": {
+    "container": ".jet-listing-grid__items.jet-listing-grid--1798",
+    "containerElementId": "lista-productos",
+    "item": ".jet-listing-grid__item",
+    "fields": {
+      "name": "h2 > a (textContent)",
+      "price": ".elementor-widget-container que contiene 'Precio de lista:'",
+      "code": ".elementor-widget-container que contiene 'Cod:'",
+      "brand": ".elementor-widget-container que contiene 'Marca:'",
+      "vehicle": "primer <p> dentro del card",
+      "stock": ".elementor-widget-container que contiene 'Stock:'"
+    },
+    "pagination": {
+      "type": "pages",
+      "selector": ".jet-filters-pagination",
+      "itemSelector": ".jet-filters-pagination__item",
+      "currentSelector": ".jet-filters-pagination__current",
+      "totalPagesAttr": "data-pages (en .jet-listing-grid__items)",
+      "currentPageAttr": "data-page (en .jet-listing-grid__items)",
+      "itemsPerPage": 12
+    }
+  },
+  "internalAPI": {
+    "detected": true,
+    "endpoint": "https://autopartessanmartin.com.ar/wp-admin/admin-ajax.php",
+    "method": "POST",
+    "provider": "JetSmartFilters",
+    "responseFormat": "JSON: { content: string (HTML del grid), pagination: { found_posts: number, max_num_pages: number, page: number } }",
+    "requiredParams": {
+      "action": "jet_smart_filters",
+      "provider": "jet-engine/lista-productos",
+      "searchQuery": "query[__s_query|search]",
+      "categoryFilter": "query[_tax_query_product_cat]",
+      "marcaFilter": "query[_tax_query_pa_marca-vehiculo]"
+    },
+    "note": "Se consume con fetch POST + cookies de sesión. La respuesta contiene HTML del grid en 'content' y datos de paginación en 'pagination'. Los filtros jerárquicos (marca, vehículo, año) solo funcionan vía DOM scraper porque necesitan interacción secuencial."
+  }
+}

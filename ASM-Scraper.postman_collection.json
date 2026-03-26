@@ -1,0 +1,411 @@
+{
+	"info": {
+		"name": "ASM Scraper API",
+		"description": "Scraper API para ASM Autopartes San Martín — POST /search\n\nEl servidor hace login automático al iniciar. Cada request ejecuta el flujo completo de búsqueda (AJAX directo o DOM scraper) y retorna productos normalizados.\n\nResponse format:\n{\n  \"total\": number,\n  \"products\": [{ \"name\", \"price\", \"code\", \"brand\", \"vehicle\", \"stock\" }]\n}",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "baseUrl",
+			"value": "http://localhost:3000"
+		}
+	],
+	"item": [
+		{
+			"name": "Búsquedas",
+			"item": [
+				{
+					"name": "Buscar por texto",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status 200', () => pm.response.to.have.status(200));",
+									"pm.test('Tiene total y products', () => {",
+									"  const body = pm.response.json();",
+									"  pm.expect(body).to.have.property('total');",
+									"  pm.expect(body).to.have.property('products');",
+									"  pm.expect(body.products).to.be.an('array');",
+									"});",
+									"pm.test('Productos tienen campos requeridos', () => {",
+									"  const body = pm.response.json();",
+									"  if (body.products.length > 0) {",
+									"    const p = body.products[0];",
+									"    pm.expect(p).to.have.property('name');",
+									"    pm.expect(p).to.have.property('price');",
+									"    pm.expect(p).to.have.property('code');",
+									"    pm.expect(p).to.have.property('brand');",
+									"    pm.expect(p).to.have.property('vehicle');",
+									"    pm.expect(p).to.have.property('stock');",
+									"  }",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"query\": \"bieleta\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/search",
+							"host": ["{{baseUrl}}"],
+							"path": ["search"]
+						},
+						"description": "Búsqueda por texto libre. Retorna todos los resultados paginados automáticamente.\n\nUsa ApiClient (AJAX directo) como estrategia principal."
+					}
+				},
+				{
+					"name": "Buscar por SKU",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status 200', () => pm.response.to.have.status(200));",
+									"pm.test('Tiene resultados', () => {",
+									"  const body = pm.response.json();",
+									"  pm.expect(body.total).to.be.a('number');",
+									"  pm.expect(body.products).to.be.an('array');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"sku\": \"5860-RSF\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/search",
+							"host": ["{{baseUrl}}"],
+							"path": ["search"]
+						},
+						"description": "Búsqueda por código SKU exacto."
+					}
+				},
+				{
+					"name": "Texto + filtro categoría",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status 200', () => pm.response.to.have.status(200));",
+									"pm.test('Retorna productos', () => {",
+									"  const body = pm.response.json();",
+									"  pm.expect(body.products).to.be.an('array');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"query\": \"bieleta\",\n  \"filters\": {\n    \"categoria\": \"BIELETAS\"\n  }\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/search",
+							"host": ["{{baseUrl}}"],
+							"path": ["search"]
+						},
+						"description": "Búsqueda por texto con filtro de categoría.\n\nCuando hay query + filtros combinados, usa DOM scraper (interacción secuencial)."
+					}
+				},
+				{
+					"name": "Texto + filtro marca",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status 200', () => pm.response.to.have.status(200));",
+									"pm.test('Retorna productos', () => {",
+									"  const body = pm.response.json();",
+									"  pm.expect(body.products).to.be.an('array');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"query\": \"amortiguador\",\n  \"filters\": {\n    \"marca\": \"CORVEN\"\n  }\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/search",
+							"host": ["{{baseUrl}}"],
+							"path": ["search"]
+						},
+						"description": "Búsqueda por texto con filtro de marca.\n\nNota: las marcas disponibles dependen de la categoría. Marcas verificadas: CORVEN, LEO, RSF, etc."
+					}
+				},
+				{
+					"name": "SKU + filtros combinados",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status 200', () => pm.response.to.have.status(200));",
+									"pm.test('Retorna productos', () => {",
+									"  const body = pm.response.json();",
+									"  pm.expect(body.products).to.be.an('array');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"sku\": \"5860\",\n  \"filters\": {\n    \"categoria\": \"BIELETAS\",\n    \"marca\": \"RSF\"\n  }\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/search",
+							"host": ["{{baseUrl}}"],
+							"path": ["search"]
+						},
+						"description": "Búsqueda por SKU con ambos filtros opcionales (categoría + marca)."
+					}
+				},
+				{
+					"name": "Texto + ambos filtros",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status 200', () => pm.response.to.have.status(200));",
+									"pm.test('Retorna productos', () => {",
+									"  const body = pm.response.json();",
+									"  pm.expect(body.products).to.be.an('array');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"query\": \"bieleta\",\n  \"filters\": {\n    \"categoria\": \"BIELETAS\",\n    \"marca\": \"RSF\"\n  }\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/search",
+							"host": ["{{baseUrl}}"],
+							"path": ["search"]
+						},
+						"description": "Búsqueda por texto con categoría y marca."
+					}
+				},
+				{
+					"name": "Buscar amortiguadores CORVEN",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status 200', () => pm.response.to.have.status(200));",
+									"pm.test('Retorna productos', () => {",
+									"  const body = pm.response.json();",
+									"  pm.expect(body.total).to.be.above(0);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"query\": \"amortiguador\",\n  \"filters\": {\n    \"categoria\": \"AMORTIGUADORES\"\n  }\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/search",
+							"host": ["{{baseUrl}}"],
+							"path": ["search"]
+						},
+						"description": "Búsqueda de amortiguadores filtrados por categoría. Útil para verificar que los filtros de categoría funcionan correctamente."
+					}
+				}
+			]
+		},
+		{
+			"name": "Validaciones",
+			"item": [
+				{
+					"name": "Error — sin query ni sku",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status 400', () => pm.response.to.have.status(400));",
+									"pm.test('Tiene mensaje de error', () => {",
+									"  const body = pm.response.json();",
+									"  pm.expect(body).to.have.property('error');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/search",
+							"host": ["{{baseUrl}}"],
+							"path": ["search"]
+						},
+						"description": "Debe retornar error 400 — se requiere al menos query o sku."
+					}
+				},
+				{
+					"name": "Error — filtro inválido",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status 400', () => pm.response.to.have.status(400));",
+									"pm.test('Indica filtros permitidos', () => {",
+									"  const body = pm.response.json();",
+									"  pm.expect(body).to.have.property('error');",
+									"  pm.expect(body).to.have.property('allowedFilters');",
+									"  pm.expect(body.allowedFilters).to.include('categoria');",
+									"  pm.expect(body.allowedFilters).to.include('marca');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"query\": \"bieleta\",\n  \"filters\": {\n    \"vehiculo\": \"PEUGEOT 208\"\n  }\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/search",
+							"host": ["{{baseUrl}}"],
+							"path": ["search"]
+						},
+						"description": "Debe retornar error 400 — 'vehiculo' no es un filtro permitido via API. Solo 'categoria' y 'marca'.\n\nLos filtros de vehículo y año son jerárquicos y requieren interacción secuencial en el DOM."
+					}
+				},
+				{
+					"name": "Error — body inválido",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status 400', () => pm.response.to.have.status(400));",
+									"pm.test('Tiene error', () => {",
+									"  const body = pm.response.json();",
+									"  pm.expect(body).to.have.property('error');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"query\": 12345\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/search",
+							"host": ["{{baseUrl}}"],
+							"path": ["search"]
+						},
+						"description": "Debe retornar error 400 — query debe ser string."
+					}
+				},
+				{
+					"name": "Ruta inexistente",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status 404', () => pm.response.to.have.status(404));",
+									"pm.test('Lista rutas disponibles', () => {",
+									"  const body = pm.response.json();",
+									"  pm.expect(body).to.have.property('rutasDisponibles');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{baseUrl}}/productos",
+							"host": ["{{baseUrl}}"],
+							"path": ["productos"]
+						},
+						"description": "Ruta que no existe. Debe retornar 404 con las rutas disponibles."
+					}
+				}
+			]
+		}
+	]
+}
