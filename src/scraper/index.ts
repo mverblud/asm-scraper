@@ -54,21 +54,8 @@ export class Scraper {
     try {
       await this.session.ensureLoggedIn();
 
-      const hasSearch = !!(filters.q || filters.sku);
-      const hasSelectFilters = !!(filters.categoria || filters.marca);
-
-      // Filtros combinados (búsqueda + selects) requieren interacción secuencial en el DOM:
-      // primero buscar, esperar resultados, luego aplicar select filters.
-      // El ApiClient envía todo en un solo POST y el sitio no filtra correctamente.
-      if (hasSearch && hasSelectFilters) {
-        logger.info(MODULE, 'Filtros combinados detectados → usando DOM scraper (interacción secuencial)');
-        const result = await this.productScraper.search(filters);
-        const elapsed = Date.now() - t0;
-        logger.info(MODULE, `⏱ Búsqueda total: ${result.totalProductos} productos en ${elapsed}ms [método: DOM]`);
-        return result;
-      }
-
-      // Para búsquedas simples, intentar ApiClient primero (más rápido)
+      // ApiClient envía query + filtros (categoría, marca) en un solo POST AJAX,
+      // lo cual es más rápido y confiable que la interacción secuencial del DOM.
       try {
         logger.info(MODULE, 'Intentando búsqueda via ApiClient (AJAX directo)...');
         const result = await this.apiClient.search(filters);
@@ -83,7 +70,7 @@ export class Scraper {
         logger.warn(MODULE, `ApiClient falló: ${msg}, fallback a DOM scraper...`);
       }
 
-      // Fallback: DOM scraper
+      // Fallback: DOM scraper (interacción secuencial)
       logger.info(MODULE, 'Usando ProductScraper (DOM)...');
       const result = await this.productScraper.search(filters);
       const elapsed = Date.now() - t0;

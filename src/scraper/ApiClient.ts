@@ -141,11 +141,21 @@ export class ApiClient {
     }
     if (filters.categoria && this.filterMaps?.product_cat) {
       const termId = this.filterMaps.product_cat[filters.categoria];
-      if (termId) params.append('query[_tax_query_product_cat]', termId);
+      if (termId) {
+        params.append('query[_tax_query_product_cat]', termId);
+        logger.debug(MODULE, `Filtro categoría: "${filters.categoria}" → termId ${termId}`);
+      } else {
+        logger.warn(MODULE, `Categoría "${filters.categoria}" no encontrada en filterMaps. Opciones disponibles: ${Object.keys(this.filterMaps.product_cat).join(', ')}`);
+      }
     }
     if (filters.marca && this.filterMaps?.['pa_marca-vehiculo']) {
       const termId = this.filterMaps['pa_marca-vehiculo'][filters.marca];
-      if (termId) params.append('query[_tax_query_pa_marca-vehiculo]', termId);
+      if (termId) {
+        params.append('query[_tax_query_pa_marca-vehiculo]', termId);
+        logger.debug(MODULE, `Filtro marca: "${filters.marca}" → termId ${termId}`);
+      } else {
+        logger.warn(MODULE, `Marca "${filters.marca}" no encontrada en filterMaps. Opciones disponibles: ${Object.keys(this.filterMaps['pa_marca-vehiculo']).join(', ')}`);
+      }
     }
 
 
