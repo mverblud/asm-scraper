@@ -1,8 +1,9 @@
 // src/scraper/ApiClient.ts
 // Cliente HTTP directo al endpoint AJAX de JetSmartFilters.
-// Hace POST a admin-ajax.php con las cookies de sesión, evitando navegar con Playwright.
-// La respuesta es HTML renderizado del grid, que se parsea igual que el DOM.
+// Usa fetch nativo de Node.js y cheerio para parsear HTML, sin depender del browser.
+// Paraleliza la obtención de múltiples páginas para búsquedas con muchos resultados.
 
+import * as cheerio from 'cheerio';
 import { SessionManager } from './SessionManager';
 import { config } from '../config';
 import { logger } from '../utils/logger';
@@ -12,11 +13,17 @@ const MODULE = 'ApiClient';
 
 const AJAX_URL = `${config.baseUrl}/wp-admin/admin-ajax.php`;
 
+// Máximo de páginas a fetchear en paralelo
+const PAGE_CONCURRENCY = 10;
+
+// Productos por página en el request AJAX (más = menos roundtrips)
+const POSTS_PER_PAGE = 100;
+
 // Parámetros fijos que JetSmartFilters envía siempre
 const FIXED_DEFAULTS: Record<string, string> = {
   'defaults[post_status][]': 'publish',
   'defaults[post_type]': 'product',
-  'defaults[posts_per_page]': '12',
+  'defaults[posts_per_page]': String(POSTS_PER_PAGE),
   'defaults[ignore_sticky_posts]': '1',
   'defaults[order]': 'ASC',
   'defaults[orderby]': 'meta_value',
@@ -35,7 +42,7 @@ const FIXED_SETTINGS: Record<string, string> = {
   'settings[inline_columns_css]': 'false',
   'settings[post_status][]': 'publish',
   'settings[use_random_posts_num]': '',
-  'settings[posts_num]': '12',
+  'settings[posts_num]': String(POSTS_PER_PAGE),
   'settings[max_posts_num]': '9',
   'settings[not_found_message]':
     'No se encontraron productos que coincidan con tu búsqueda, borrá los filtros e intentalo nuevamente',
@@ -160,151 +167,162 @@ export class ApiClient {
     return params.toString();
   }
 
-  // ── Parsear HTML response ────────────────────────────────
-  private async parseHtmlProducts(html: string): Promise<Product[]> {
-    // Usamos page.evaluate para parsear el HTML con el DOM del browser
-    // Esto es más fiable que un parser externo
-    return this.session.page.evaluate((htmlStr: string) => {
-      const parser = new DOMParser();
-      const doc = parser.parseFromString(htmlStr, 'text/html');
+  // ── Parsear HTML response con cheerio (sin browser) ──────
+  private parseHtmlProducts(html: string): Product[] {
+    const $ = cheerio.load(html);
+    const products: Product[] = [];
+    const seen = new Set<string>();
 
-      const products: Array<{
-        id: string | null;
-        titulo: string;
-        sku: string | null;
-        vehiculo: string | null;
-        marca: string | null;
-        stock: number | null;
-        precio: string | null;
-        url: string | null;
-      }> = [];
-      const seen = new Set<string>();
+    $('.jet-listing-grid__item').each((_, el) => {
+      const card = $(el);
+      const h2 = card.find('h2');
+      if (!h2.length) return;
+      const title = h2.text().trim();
+      if (!title || seen.has(title)) return;
 
-      const cards = doc.querySelectorAll('.jet-listing-grid__item');
-      cards.forEach((card) => {
-        const h2 = card.querySelector('h2');
-        if (!h2) return;
-        const title = h2.textContent?.trim() ?? '';
-        if (!title || seen.has(title)) return;
+      const titleLink = h2.find('a');
+      const url = titleLink.attr('href') ?? null;
 
-        const titleLink = h2.querySelector('a') as HTMLAnchorElement | null;
-        const url = titleLink?.getAttribute('href') ?? null;
+      // Imagen del producto
+      const img = card.find('img').first();
+      const imagen = img.attr('data-src') || img.attr('src') || null;
 
-        const vehiculo = card.querySelector('p')?.textContent?.trim() || null;
+      const vehiculo = card.find('p').first().text().trim() || null;
 
-        let stock: number | null = null;
-        let precio: string | null = null;
-        let codigo: string | null = null;
-        let marca: string | null = null;
+      let stock: number | null = null;
+      let precio: string | null = null;
+      let codigo: string | null = null;
+      let marca: string | null = null;
 
-        card.querySelectorAll('.elementor-widget-container').forEach((widget) => {
-          const text = widget.textContent?.trim() ?? '';
-          if (text.startsWith('Stock:')) {
-            const match = text.match(/(\d+)/);
-            stock = match ? parseInt(match[1], 10) : 0;
-          }
-          if (text.includes('Precio de lista:')) {
-            const priceText = text.replace('Precio de lista:', '').trim();
-            precio = priceText.replace(/[^0-9.,]/g, '').trim() || null;
-          }
-          if (text.startsWith('Cod:')) {
-            codigo = text.replace('Cod:', '').trim() || null;
-          }
-          if (text.startsWith('Marca:')) {
-            marca = text.replace('Marca:', '').trim() || null;
-          }
-        });
-
-        const sku =
-          codigo ||
-          (url ? (url.split('/producto/')[1]?.replace(/\//g, '').toUpperCase() ?? null) : null);
-
-        const addToCartLink = card.querySelector('a[href*="add-to-cart"]') as HTMLAnchorElement | null;
-        const cartMatch = addToCartLink?.getAttribute('href')?.match(/add-to-cart=(\d+)/);
-        const id = cartMatch ? cartMatch[1] : null;
-
-        seen.add(title);
-        products.push({ id, titulo: title, sku, vehiculo, marca, stock, precio, url });
+      card.find('.elementor-widget-container').each((_, widget) => {
+        const text = $(widget).text().trim();
+        if (text.startsWith('Stock:')) {
+          const match = text.match(/(\d+)/);
+          stock = match ? parseInt(match[1], 10) : 0;
+        }
+        if (text.includes('Precio de lista:')) {
+          const priceText = text.replace('Precio de lista:', '').trim();
+          precio = priceText.replace(/[^0-9.,]/g, '').trim() || null;
+        }
+        if (text.startsWith('Cod:')) {
+          codigo = text.replace('Cod:', '').trim() || null;
+        }
+        if (text.startsWith('Marca:')) {
+          marca = text.replace('Marca:', '').trim() || null;
+        }
       });
 
-      return products;
-    }, html);
+      const sku =
+        codigo ||
+        (url ? (url.split('/producto/')[1]?.replace(/\//g, '').toUpperCase() ?? null) : null);
+
+      const addToCartLink = card.find('a[href*="add-to-cart"]');
+      const cartMatch = addToCartLink.attr('href')?.match(/add-to-cart=(\d+)/);
+      const id = cartMatch ? cartMatch[1] : null;
+
+      seen.add(title);
+      products.push({ id, titulo: title, sku, vehiculo, marca, stock, precio, url, imagen });
+    });
+
+    return products;
   }
 
-  // ── Hacer request AJAX ───────────────────────────────────
+  // ── Hacer request AJAX con fetch nativo de Node.js ──────
   private async fetchPage(
     filters: Omit<SearchFilters, 'allPages'>,
     page: number,
   ): Promise<{ products: Product[]; pagination: Pagination }> {
     const cookies = await this.session.getCookies();
     const body = this.buildRequestBody(filters, page);
+    const t0 = Date.now();
 
     logger.debug(MODULE, `Fetch AJAX página ${page}`);
 
-    // Usamos page.evaluate para hacer el fetch con las cookies del contexto del browser
-    const response = await this.session.page.evaluate(
-      async (args: { url: string; body: string }) => {
-        const res = await fetch(args.url, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-            'X-Requested-With': 'XMLHttpRequest',
-          },
-          body: args.body,
-          credentials: 'same-origin',
-        });
-
-        if (!res.ok) return { error: `HTTP ${res.status}`, html: '', pagination: null };
-
-        const json = await res.json();
-        return {
-          html: json.content || json.data?.html || '',
-          pagination: json.pagination || null,
-        };
+    const res = await fetch(AJAX_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
+        'X-Requested-With': 'XMLHttpRequest',
+        'Cookie': cookies,
       },
-      { url: AJAX_URL, body },
-    );
+      body,
+    });
 
-    if ('error' in response && response.error) {
-      throw new Error(`AJAX request falló: ${response.error}`);
+    if (!res.ok) {
+      throw new Error(`AJAX request falló: HTTP ${res.status}`);
     }
 
-    const html = (response as { html: string }).html;
-    const paginationResponse = (response as { pagination?: { found_posts?: number; max_num_pages?: number; page?: number } }).pagination;
+    const json = await res.json() as {
+      content?: string;
+      data?: { html?: string };
+      pagination?: { found_posts?: number; max_num_pages?: number; page?: number };
+    };
+
+    const html = json.content || json.data?.html || '';
+    const paginationResponse = json.pagination;
 
     if (paginationResponse) {
       this.lastFoundPosts = paginationResponse.found_posts ?? this.lastFoundPosts;
       this.lastMaxPages = paginationResponse.max_num_pages ?? this.lastMaxPages;
     }
 
-    const products = await this.parseHtmlProducts(html);
+    const products = this.parseHtmlProducts(html);
 
     const pagination: Pagination = {
       currentPage: paginationResponse?.page ?? page,
       totalPages: paginationResponse?.max_num_pages ?? (this.lastMaxPages || 1),
     };
 
+    logger.debug(MODULE, `Página ${page} obtenida: ${products.length} productos en ${Date.now() - t0}ms`);
+
     return { products, pagination };
+  }
+
+  // ── Fetch múltiples páginas en paralelo con concurrencia ──
+  private async fetchPagesParallel(
+    filters: Omit<SearchFilters, 'allPages'>,
+    startPage: number,
+    endPage: number,
+  ): Promise<Product[]> {
+    const pages = Array.from({ length: endPage - startPage + 1 }, (_, i) => startPage + i);
+    const allProducts: Product[] = [];
+
+    for (let i = 0; i < pages.length; i += PAGE_CONCURRENCY) {
+      const batch = pages.slice(i, i + PAGE_CONCURRENCY);
+      logger.debug(MODULE, `Fetch paralelo páginas [${batch.join(', ')}]`);
+
+      const results = await Promise.all(
+        batch.map((p) => this.fetchPage(filters, p)),
+      );
+
+      for (const { products } of results) {
+        allProducts.push(...products);
+      }
+    }
+
+    return allProducts;
   }
 
   // ── Búsqueda principal via API ───────────────────────────
   async search(filters: SearchFilters = {}): Promise<SearchResult> {
     const { allPages, ...rest } = filters;
+    const t0 = Date.now();
 
     logger.info(MODULE, 'Ejecutando búsqueda via AJAX', rest);
 
-    await this.loadFilterMaps();
+    // Solo cargar mapas de filtros si se necesitan (evita page.evaluate innecesario)
+    const needsFilterMaps = !!(rest.categoria || rest.marca);
+    if (needsFilterMaps) {
+      await this.loadFilterMaps();
+    }
 
     const { products, pagination } = await this.fetchPage(rest, 1);
 
     logger.info(MODULE, `Página ${pagination.currentPage}/${pagination.totalPages} - ${products.length} productos`);
 
     if (allPages && pagination.totalPages > 1) {
-      for (let p = 2; p <= pagination.totalPages; p++) {
-        logger.debug(MODULE, `Fetch AJAX página ${p}/${pagination.totalPages}`);
-        const { products: pageProducts } = await this.fetchPage(rest, p);
-        products.push(...pageProducts);
-      }
+      const remainingProducts = await this.fetchPagesParallel(rest, 2, pagination.totalPages);
+      products.push(...remainingProducts);
 
       // Deduplicar
       const seen = new Set<string>();
@@ -314,6 +332,9 @@ export class ApiClient {
         return true;
       });
 
+      const elapsed = Date.now() - t0;
+      logger.info(MODULE, `Búsqueda AJAX completa: ${deduped.length} productos, ${pagination.totalPages} páginas en ${elapsed}ms`);
+
       return {
         success: true,
         filtros: rest,
@@ -322,6 +343,9 @@ export class ApiClient {
         productos: deduped,
       };
     }
+
+    const elapsed = Date.now() - t0;
+    logger.info(MODULE, `Búsqueda AJAX completa: ${products.length} productos, 1 página en ${elapsed}ms`);
 
     return {
       success: true,

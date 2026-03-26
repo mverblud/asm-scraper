@@ -50,6 +50,7 @@ export class Scraper {
   // ── Búsqueda principal ───────────────────────────────────
   async search(filters: SearchFilters = {}): Promise<SearchResult> {
     await this.acquireLock();
+    const t0 = Date.now();
     try {
       await this.session.ensureLoggedIn();
 
@@ -61,7 +62,10 @@ export class Scraper {
       // El ApiClient envía todo en un solo POST y el sitio no filtra correctamente.
       if (hasSearch && hasSelectFilters) {
         logger.info(MODULE, 'Filtros combinados detectados → usando DOM scraper (interacción secuencial)');
-        return await this.productScraper.search(filters);
+        const result = await this.productScraper.search(filters);
+        const elapsed = Date.now() - t0;
+        logger.info(MODULE, `⏱ Búsqueda total: ${result.totalProductos} productos en ${elapsed}ms [método: DOM]`);
+        return result;
       }
 
       // Para búsquedas simples, intentar ApiClient primero (más rápido)
@@ -69,7 +73,8 @@ export class Scraper {
         logger.info(MODULE, 'Intentando búsqueda via ApiClient (AJAX directo)...');
         const result = await this.apiClient.search(filters);
         if (result.productos.length > 0 || !filters.q) {
-          logger.info(MODULE, `ApiClient retornó ${result.totalProductos} productos`);
+          const elapsed = Date.now() - t0;
+          logger.info(MODULE, `⏱ Búsqueda total: ${result.totalProductos} productos en ${elapsed}ms [método: AJAX]`);
           return result;
         }
         logger.warn(MODULE, 'ApiClient retornó 0 productos, fallback a DOM scraper...');
@@ -80,7 +85,10 @@ export class Scraper {
 
       // Fallback: DOM scraper
       logger.info(MODULE, 'Usando ProductScraper (DOM)...');
-      return await this.productScraper.search(filters);
+      const result = await this.productScraper.search(filters);
+      const elapsed = Date.now() - t0;
+      logger.info(MODULE, `⏱ Búsqueda total: ${result.totalProductos} productos en ${elapsed}ms [método: DOM-fallback]`);
+      return result;
     } finally {
       this.releaseLock();
     }
@@ -88,14 +96,27 @@ export class Scraper {
 
   // ── Normalización de productos para POST /search ─────────
   static normalizeProducts(products: Product[]): NormalizedProduct[] {
-    return products.map((p) => ({
-      name: p.titulo,
-      price: p.precio ?? '',
-      code: p.sku ?? '',
-      brand: p.marca ?? '',
-      vehicle: p.vehiculo ?? '',
-      stock: p.stock ?? 0,
-    }));
+    return products.map((p) => {
+      // Formato argentino: 186.415,00 → quitar puntos de miles, coma → punto decimal
+      const raw = (p.precio ?? '0').trim().replace(/\./g, '').replace(',', '.');
+      const precioObtenido = parseFloat(raw) || 0;
+      const precioIva = precioObtenido * 1.21;
+      const precioCosto = precioIva * 0.45;
+      const precioVenta = precioCosto * 1.25;
+
+      return {
+        code: p.sku ?? '',
+        brand: p.marca ?? '',
+        category: p.titulo.split(/\s+/)[0] ?? '',
+        vehicle: p.vehiculo ?? '',
+        precioObtenido: parseFloat(precioObtenido.toFixed(2)),
+        precioIva: parseFloat(precioIva.toFixed(2)),
+        precioCosto: parseFloat(precioCosto.toFixed(2)),
+        precioVenta: parseFloat(precioVenta.toFixed(2)),
+        stock: p.stock ?? 0,
+        image: p.imagen ?? '',
+      };
+    });
   }
 
   // ── Cierre ───────────────────────────────────────────────

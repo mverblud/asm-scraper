@@ -79,12 +79,15 @@ export function searchRouter(scraper: Scraper): Router {
 
       logger.info(MODULE, 'POST /search', searchFilters);
 
+      const t0 = Date.now();
       const result = await scraper.search(searchFilters);
+      const totalMs = Date.now() - t0;
       const normalizedProducts = Scraper.normalizeProducts(result.productos);
 
       res.json({
         total: normalizedProducts.length,
         products: normalizedProducts,
+        timing: { totalMs },
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : 'Error desconocido';

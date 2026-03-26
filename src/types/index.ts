@@ -10,16 +10,21 @@ export interface Product {
   stock: number | null;
   precio: string | null;
   url: string | null;
+  imagen: string | null;
 }
 
 // ── Producto normalizado (API output) ──────────────────────
 export interface NormalizedProduct {
-  name: string;
-  price: string;
   code: string;
   brand: string;
+  category: string;
   vehicle: string;
+  precioObtenido: number;
+  precioIva: number;
+  precioCosto: number;
+  precioVenta: number;
   stock: number;
+  image: string;
 }
 
 // ── Paginación ─────────────────────────────────────────────
