@@ -100,6 +100,18 @@ export class ApiClient {
 
     logger.debug(MODULE, 'Cargando mapas de filtros del DOM...');
 
+    // Navegar a la tienda donde están los selectores de filtros
+    const page = this.session.page;
+    const currentUrl = page.url();
+    if (!currentUrl.includes('/tienda')) {
+      logger.debug(MODULE, `Navegando a la tienda (actual: ${currentUrl})...`);
+      await page.goto(config.shopUrl, { waitUntil: 'domcontentloaded', timeout: config.requestTimeout });
+      // Esperar a que los selects de filtros estén presentes en el DOM
+      await page.waitForSelector('[data-query-var] select', { timeout: 10000 }).catch(() => {
+        logger.warn(MODULE, 'No se encontraron selectores de filtros en la tienda');
+      });
+    }
+
     this.filterMaps = await this.session.page.evaluate(() => {
       const maps: Record<string, Record<string, string>> = {};
       const selects = document.querySelectorAll('[data-query-var] select');
