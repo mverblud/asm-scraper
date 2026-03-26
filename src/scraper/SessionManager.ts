@@ -45,9 +45,24 @@ export class SessionManager {
     throw lastError ?? new Error('Login fallido luego de todos los reintentos');
   }
 
+  // ── Bloquear recursos innecesarios en la page ───────────
+  private async blockUnnecessaryResources(page: Page): Promise<void> {
+    await page.route('**/*.{png,jpg,jpeg,gif,webp,svg,ico,woff,woff2,ttf,eot,mp4,webm,ogg}', (route) => route.abort());
+    await page.route(/(google-analytics|googletagmanager|facebook|hotjar|doubleclick|adservice)/, (route) => route.abort());
+  }
+
   // ── Login real ───────────────────────────────────────────
   private async doLogin(): Promise<void> {
-    this.browser = await chromium.launch({ headless: config.headless });
+    this.browser = await chromium.launch({
+      headless: config.headless,
+      args: [
+        '--disable-gpu',
+        '--disable-dev-shm-usage',
+        '--no-sandbox',
+        '--disable-extensions',
+        '--disable-background-networking',
+      ],
+    });
 
     // Intentar restaurar sesión desde storageState guardado
     if (fs.existsSync(STORAGE_PATH)) {
@@ -55,6 +70,7 @@ export class SessionManager {
       try {
         this.context = await this.browser.newContext({ storageState: STORAGE_PATH });
         this._page = await this.context.newPage();
+        await this.blockUnnecessaryResources(this._page);
 
         await this._page.goto(config.loginUrl, {
           waitUntil: 'networkidle',
@@ -78,6 +94,7 @@ export class SessionManager {
     // Login fresco
     this.context = await this.browser.newContext();
     this._page = await this.context.newPage();
+    await this.blockUnnecessaryResources(this._page);
 
     await this._page.goto(config.loginUrl, {
       waitUntil: 'networkidle',
@@ -132,9 +149,20 @@ export class SessionManager {
     }
 
     try {
-      // Verificar sesión navegando a la cuenta
+      // Verificar sesión por cookie (rápido, sin navegación)
+      if (this.context) {
+        const cookies = await this.context.cookies();
+        const hasSession = cookies.some((c) => c.name.startsWith('wordpress_logged_in_'));
+        if (hasSession) {
+          logger.debug(MODULE, 'Sesión válida (verificada por cookie)');
+          return;
+        }
+      }
+
+      // Fallback: verificar navegando
+      logger.warn(MODULE, 'Cookie de sesión no encontrada, verificando por navegación...');
       await this._page.goto(config.loginUrl, {
-        waitUntil: 'networkidle',
+        waitUntil: 'domcontentloaded',
         timeout: config.requestTimeout,
       });
 

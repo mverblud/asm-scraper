@@ -17,9 +17,13 @@ export class ProductScraper {
   // ── Esperar a que el grid se actualice ───────────────────
   private async waitForGridUpdate(): Promise<void> {
     try {
-      await this.page.waitForLoadState('networkidle', { timeout: config.requestTimeout });
+      // Esperar la respuesta AJAX del filtro (más preciso que networkidle)
+      await this.page.waitForResponse(
+        (res) => res.url().includes('admin-ajax.php') && res.status() === 200,
+        { timeout: config.requestTimeout },
+      );
     } catch {
-      logger.warn(MODULE, 'networkidle timeout, continuando...');
+      logger.warn(MODULE, 'waitForResponse timeout, esperando selector...');
     }
 
     // Esperar a que el grid exista
@@ -38,7 +42,14 @@ export class ProductScraper {
     const url = `${config.shopUrl}${qs ? '?' + qs : ''}`;
 
     logger.debug(MODULE, `Navegando a ${url}`);
-    await this.page.goto(url, { waitUntil: 'networkidle', timeout: config.requestTimeout });
+    await this.page.goto(url, { waitUntil: 'domcontentloaded', timeout: config.requestTimeout });
+
+    // Esperar a que el grid esté presente después de navegar
+    try {
+      await this.page.waitForSelector('.jet-listing-grid__items', { timeout: 10000 });
+    } catch {
+      logger.warn(MODULE, 'Grid no encontrado post-navegación');
+    }
 
     // Búsqueda por texto libre
     if (filters.q) {
@@ -87,6 +98,7 @@ export class ProductScraper {
         stock: number | null;
         precio: string | null;
         url: string | null;
+        imagen: string | null;
       }> = [];
       const seen = new Set<string>();
 
@@ -99,6 +111,10 @@ export class ProductScraper {
 
         const titleLink = h2.querySelector('a') as HTMLAnchorElement | null;
         const url = titleLink?.href ?? null;
+
+        // Imagen del producto
+        const img = card.querySelector('img') as HTMLImageElement | null;
+        const imagen = img?.dataset?.src || img?.src || null;
 
         // Vehículo: primer <p> dentro de la card
         const vehiculo = card.querySelector('p')?.textContent?.trim() || null;
@@ -137,7 +153,7 @@ export class ProductScraper {
         const id = cartMatch ? cartMatch[1] : null;
 
         seen.add(title);
-        products.push({ id, titulo: title, sku, vehiculo, marca, stock, precio, url });
+        products.push({ id, titulo: title, sku, vehiculo, marca, stock, precio, url, imagen });
       });
 
       return products;
@@ -173,6 +189,7 @@ export class ProductScraper {
   // ── Búsqueda principal ───────────────────────────────────
   async search(filters: SearchFilters = {}): Promise<SearchResult> {
     const { allPages, ...rest } = filters;
+    const t0 = Date.now();
 
     logger.info(MODULE, 'Ejecutando búsqueda DOM', rest);
     await this.navigateAndFilter(rest);
@@ -193,6 +210,9 @@ export class ProductScraper {
       // Deduplicar por título
       const deduped = this.deduplicateProducts(products);
 
+      const elapsed = Date.now() - t0;
+      logger.info(MODULE, `Búsqueda DOM completa: ${deduped.length} productos, ${pagination.totalPages} páginas en ${elapsed}ms`);
+
       return {
         success: true,
         filtros: rest,
@@ -201,6 +221,9 @@ export class ProductScraper {
         productos: deduped,
       };
     }
+
+    const elapsed = Date.now() - t0;
+    logger.info(MODULE, `Búsqueda DOM completa: ${products.length} productos, 1 página en ${elapsed}ms`);
 
     return {
       success: true,
