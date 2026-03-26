@@ -26,8 +26,8 @@ El archivo `.env` ya viene configurado. Si necesitás cambiarlo:
 ```env
 PORT=3000
 
-ASM_USERNAME=mv
-ASM_PASSWORD=asm123
+ASM_USERNAME=tu_usuario
+ASM_PASSWORD=tu_contraseña
 
 ASM_BASE_URL=https://autopartessanmartin.com.ar
 ASM_LOGIN_URL=https://autopartessanmartin.com.ar/cuenta/
