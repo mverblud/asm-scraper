@@ -1,0 +1,254 @@
+[
+  {
+    "id": "63",
+    "nombre": "AMORTIGUADORES"
+  },
+  {
+    "id": "67",
+    "nombre": "AXIALES"
+  },
+  {
+    "id": "71",
+    "nombre": "BUJES DE SUSPENSION"
+  },
+  {
+    "id": "230",
+    "nombre": "DISCOS DE FRENO"
+  },
+  {
+    "id": "242",
+    "nombre": "EXTREMOS"
+  },
+  {
+    "id": "281",
+    "nombre": "ROTULAS"
+  },
+  {
+    "id": "2593",
+    "nombre": "CAMPANAS DE FRENO"
+  },
+  {
+    "id": "2656",
+    "nombre": "BIELETAS"
+  },
+  {
+    "id": "2701",
+    "nombre": "JUNTAS HOMOCINETICAS"
+  },
+  {
+    "id": "2927",
+    "nombre": "SEMIEJES"
+  },
+  {
+    "id": "2931",
+    "nombre": "CAZOLETAS"
+  },
+  {
+    "id": "2937",
+    "nombre": "PASTILLAS DE FRENO"
+  },
+  {
+    "id": "2957",
+    "nombre": "BOMBAS DE FRENO"
+  },
+  {
+    "id": "2961",
+    "nombre": "CILINDROS DE RUEDA"
+  },
+  {
+    "id": "2973",
+    "nombre": "KITS DE EMBRAGUE"
+  },
+  {
+    "id": "2994",
+    "nombre": "TRICETAS"
+  },
+  {
+    "id": "2996",
+    "nombre": "TENSORES DE CADENA"
+  },
+  {
+    "id": "2998",
+    "nombre": "TUERCAS DE SEMIEJE"
+  },
+  {
+    "id": "2999",
+    "nombre": "ABRAZADERAS"
+  },
+  {
+    "id": "3002",
+    "nombre": "COLUMNAS DE DIRECCION"
+  },
+  {
+    "id": "3004",
+    "nombre": "MAZAS DE RUEDA"
+  },
+  {
+    "id": "3020",
+    "nombre": "PARRILLAS DE SUSPENSION"
+  },
+  {
+    "id": "3048",
+    "nombre": "ESPIGAS DE SEMIEJE"
+  },
+  {
+    "id": "3049",
+    "nombre": "BRAZOS DE SUSPENSION"
+  },
+  {
+    "id": "3057",
+    "nombre": "FUELLES SELECTOR"
+  },
+  {
+    "id": "3058",
+    "nombre": "FUELLES DE SUSPENSION"
+  },
+  {
+    "id": "3060",
+    "nombre": "KITS FUELLES DE TRANSMISION"
+  },
+  {
+    "id": "3075",
+    "nombre": "KITS FUELLES DE DIRECCION"
+  },
+  {
+    "id": "3077",
+    "nombre": "KITS FUELLES Y TOPES DE SUSPENSION"
+  },
+  {
+    "id": "3078",
+    "nombre": "TOPES DE SUSPENSION"
+  },
+  {
+    "id": "3082",
+    "nombre": "BARRAS DE DIRECCION"
+  },
+  {
+    "id": "3087",
+    "nombre": "MANCHONES"
+  },
+  {
+    "id": "3110",
+    "nombre": "CRUCETAS"
+  },
+  {
+    "id": "3118",
+    "nombre": "SOPORTES DE CARDAN"
+  },
+  {
+    "id": "3125",
+    "nombre": "PINZAS PARA ABRAZADERAS"
+  },
+  {
+    "id": "3126",
+    "nombre": "PRECINTOS PLASTICOS"
+  },
+  {
+    "id": "3127",
+    "nombre": "GRASAS"
+  },
+  {
+    "id": "3130",
+    "nombre": "KITS BUJES DE SUSPENSION"
+  },
+  {
+    "id": "3185",
+    "nombre": "RODAMIENTOS DE RUEDA"
+  },
+  {
+    "id": "3193",
+    "nombre": "PUNTAS DE EJE"
+  },
+  {
+    "id": "3194",
+    "nombre": "RODAMIENTOS DE AIRE ACONDICIONADO"
+  },
+  {
+    "id": "3195",
+    "nombre": "RODAMIENTOS DE CAJA"
+  },
+  {
+    "id": "3196",
+    "nombre": "RODAMIENTOS RETEN DE PALIER"
+  },
+  {
+    "id": "3205",
+    "nombre": "RODAMIENTOS DE SUSPENSION"
+  },
+  {
+    "id": "3209",
+    "nombre": "SOPORTES DE AMORTIGUADOR"
+  },
+  {
+    "id": "3210",
+    "nombre": "SOPORTES DE MOTOR"
+  },
+  {
+    "id": "3211",
+    "nombre": "SOPORTES TENSORES"
+  },
+  {
+    "id": "3212",
+    "nombre": "TENSORES DE CORREA"
+  },
+  {
+    "id": "3219",
+    "nombre": "CRAPODINAS DE EMBRAGUE"
+  },
+  {
+    "id": "3220",
+    "nombre": "CAPUCHONES"
+  },
+  {
+    "id": "3222",
+    "nombre": "CRAPODINAS DE SUSPENSION"
+  },
+  {
+    "id": "3226",
+    "nombre": "CREMALLERAS DE DIRECCION MECANICAS"
+  },
+  {
+    "id": "3227",
+    "nombre": "CREMALLERAS DE DIRECCION ELECTRICAS"
+  },
+  {
+    "id": "3228",
+    "nombre": "CREMALLERAS DE DIRECCION HIDRAULICAS"
+  },
+  {
+    "id": "3229",
+    "nombre": "RODAMIENTOS DE RUEDA C/ ABS"
+  },
+  {
+    "id": "3230",
+    "nombre": "RODAMIENTOS DE VENTILADOR"
+  },
+  {
+    "id": "3232",
+    "nombre": "EJE DE PARRILLA"
+  },
+  {
+    "id": "3235",
+    "nombre": "CUBRE CAZOLETA"
+  },
+  {
+    "id": "3237",
+    "nombre": "PALIERS"
+  },
+  {
+    "id": "3238",
+    "nombre": "ACOPLES"
+  },
+  {
+    "id": "3239",
+    "nombre": "CAJONES TRASERO"
+  },
+  {
+    "id": "3240",
+    "nombre": "PUNTERAS DE CHASIS"
+  },
+  {
+    "id": "3241",
+    "nombre": "DADOS PALANCA DE CAMBIO"
+  }
+]

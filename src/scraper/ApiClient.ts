@@ -100,6 +100,18 @@ export class ApiClient {
 
     logger.debug(MODULE, 'Cargando mapas de filtros del DOM...');
 
+    // Navegar a la tienda donde están los selectores de filtros
+    const page = this.session.page;
+    const currentUrl = page.url();
+    if (!currentUrl.includes('/tienda')) {
+      logger.debug(MODULE, `Navegando a la tienda (actual: ${currentUrl})...`);
+      await page.goto(config.shopUrl, { waitUntil: 'domcontentloaded', timeout: config.requestTimeout });
+      // Esperar a que los selects de filtros estén presentes en el DOM
+      await page.waitForSelector('[data-query-var] select', { timeout: 10000 }).catch(() => {
+        logger.warn(MODULE, 'No se encontraron selectores de filtros en la tienda');
+      });
+    }
+
     this.filterMaps = await this.session.page.evaluate(() => {
       const maps: Record<string, Record<string, string>> = {};
       const selects = document.querySelectorAll('[data-query-var] select');
@@ -141,11 +153,21 @@ export class ApiClient {
     }
     if (filters.categoria && this.filterMaps?.product_cat) {
       const termId = this.filterMaps.product_cat[filters.categoria];
-      if (termId) params.append('query[_tax_query_product_cat]', termId);
+      if (termId) {
+        params.append('query[_tax_query_product_cat]', termId);
+        logger.debug(MODULE, `Filtro categoría: "${filters.categoria}" → termId ${termId}`);
+      } else {
+        logger.warn(MODULE, `Categoría "${filters.categoria}" no encontrada en filterMaps. Opciones disponibles: ${Object.keys(this.filterMaps.product_cat).join(', ')}`);
+      }
     }
     if (filters.marca && this.filterMaps?.['pa_marca-vehiculo']) {
       const termId = this.filterMaps['pa_marca-vehiculo'][filters.marca];
-      if (termId) params.append('query[_tax_query_pa_marca-vehiculo]', termId);
+      if (termId) {
+        params.append('query[_tax_query_pa_marca-vehiculo]', termId);
+        logger.debug(MODULE, `Filtro marca: "${filters.marca}" → termId ${termId}`);
+      } else {
+        logger.warn(MODULE, `Marca "${filters.marca}" no encontrada en filterMaps. Opciones disponibles: ${Object.keys(this.filterMaps['pa_marca-vehiculo']).join(', ')}`);
+      }
     }
 
 

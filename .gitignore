@@ -3,3 +3,5 @@ dist/
 .env
 *.js.map
 .session-state.json
+.vscode/
+.DS_Store
