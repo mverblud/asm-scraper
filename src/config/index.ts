@@ -23,4 +23,8 @@ export const config: AppConfig = {
   loginTimeout: parseInt(process.env.ASM_LOGIN_TIMEOUT ?? '30000', 10),
   requestTimeout: parseInt(process.env.ASM_REQUEST_TIMEOUT ?? '30000', 10),
   maxRetries: parseInt(process.env.ASM_MAX_RETRIES ?? '3', 10),
+  jwtSecret: requireEnv('JWT_SECRET'),
+  jwtExpiresIn: process.env.JWT_EXPIRES_IN ?? '8h',
+  apiUsername: requireEnv('API_USERNAME'),
+  apiPassword: requireEnv('API_PASSWORD'),
 };
