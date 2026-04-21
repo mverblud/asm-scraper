@@ -4,6 +4,8 @@ import cors from 'cors';
 import { config } from './config';
 import { Scraper } from './scraper';
 import { searchRouter } from './api/routes/search';
+import { authRouter } from './api/routes/auth';
+import { authMiddleware } from './api/middleware/auth';
 import { logger } from './utils/logger';
 
 const MODULE = 'App';
@@ -25,6 +27,8 @@ async function bootstrap(): Promise<void> {
   app.use(express.json());
 
   // ── 3. Rutas ─────────────────────────────────────────────
+  app.use('/auth', authRouter);
+  app.use(authMiddleware);
   app.use('/search', searchRouter(scraper));
 
   // 404 genérico
@@ -32,7 +36,7 @@ async function bootstrap(): Promise<void> {
     res.status(404).json({
       success: false,
       error: 'Ruta no encontrada',
-      rutasDisponibles: ['POST /search'],
+      rutasDisponibles: ['POST /auth/login', 'POST /search'],
     });
   });
 

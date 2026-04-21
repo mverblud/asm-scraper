@@ -79,4 +79,8 @@ export interface AppConfig {
   loginTimeout: number;
   requestTimeout: number;
   maxRetries: number;
+  jwtSecret: string;
+  jwtExpiresIn: string;
+  apiUsername: string;
+  apiPassword: string;
 }

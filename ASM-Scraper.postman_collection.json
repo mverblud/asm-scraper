@@ -1,16 +1,164 @@
 {
 	"info": {
 		"name": "ASM Scraper API",
-		"description": "Scraper API para ASM Autopartes San Martín — POST /search\n\nEl servidor hace login automático al iniciar. Cada request ejecuta el flujo completo de búsqueda (AJAX directo o DOM scraper) y retorna productos normalizados.\n\nResponse format:\n{\n  \"total\": number,\n  \"products\": [{ \"name\", \"price\", \"code\", \"brand\", \"vehicle\", \"stock\" }]\n}",
+		"description": "Scraper API para ASM Autopartes San Martín.\n\nFlujo de uso:\n1. Ejecutar «Login exitoso» para obtener un JWT (se guarda automáticamente en {{token}})\n2. Todos los demás requests usan {{token}} en el header Authorization\n\nResponse format POST /search:\n{\n  \"total\": number,\n  \"products\": [{ \"name\", \"price\", \"code\", \"brand\", \"vehicle\", \"stock\" }]\n}",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"variable": [
 		{
 			"key": "baseUrl",
 			"value": "http://localhost:3000"
+		},
+		{
+			"key": "token",
+			"value": ""
 		}
 	],
 	"item": [
+		{
+			"name": "Autenticación",
+			"item": [
+				{
+					"name": "Login exitoso",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status 200', () => pm.response.to.have.status(200));",
+									"pm.test('Retorna token', () => {",
+									"  const body = pm.response.json();",
+									"  pm.expect(body).to.have.property('token');",
+									"  pm.expect(body.token).to.be.a('string').and.not.empty;",
+									"  pm.collectionVariables.set('token', body.token);",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"admin\",\n  \"password\": \"tu_password\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/login",
+							"host": ["{{baseUrl}}"],
+							"path": ["auth", "login"]
+						},
+						"description": "Autentica con usuario y contraseña (definidos en .env como API_USERNAME / API_PASSWORD).\n\nEl test script guarda el token automáticamente en la variable de colección {{token}}."
+					}
+				},
+				{
+					"name": "Error — credenciales incorrectas",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status 401', () => pm.response.to.have.status(401));",
+									"pm.test('Tiene mensaje de error', () => {",
+									"  const body = pm.response.json();",
+									"  pm.expect(body).to.have.property('error');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"username\": \"admin\",\n  \"password\": \"password_incorrecto\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/auth/login",
+							"host": ["{{baseUrl}}"],
+							"path": ["auth", "login"]
+						},
+						"description": "Debe retornar 401 cuando las credenciales son incorrectas."
+					}
+				},
+				{
+					"name": "Error — sin token",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status 401', () => pm.response.to.have.status(401));",
+									"pm.test('Tiene mensaje de error', () => {",
+									"  const body = pm.response.json();",
+									"  pm.expect(body).to.have.property('error');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"query\": \"bieleta\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/search",
+							"host": ["{{baseUrl}}"],
+							"path": ["search"]
+						},
+						"description": "Llamado a /search sin Authorization header. Debe retornar 401."
+					}
+				},
+				{
+					"name": "Error — token inválido",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test('Status 401', () => pm.response.to.have.status(401));",
+									"pm.test('Tiene mensaje de error', () => {",
+									"  const body = pm.response.json();",
+									"  pm.expect(body).to.have.property('error');",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer token_falso_invalido" }
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n  \"query\": \"bieleta\"\n}"
+						},
+						"url": {
+							"raw": "{{baseUrl}}/search",
+							"host": ["{{baseUrl}}"],
+							"path": ["search"]
+						},
+						"description": "Llamado a /search con un token manipulado o expirado. Debe retornar 401."
+					}
+				}
+			]
+		},
 		{
 			"name": "Búsquedas",
 			"item": [
@@ -48,7 +196,8 @@
 					"request": {
 						"method": "POST",
 						"header": [
-							{ "key": "Content-Type", "value": "application/json" }
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
 						],
 						"body": {
 							"mode": "raw",
@@ -83,7 +232,8 @@
 					"request": {
 						"method": "POST",
 						"header": [
-							{ "key": "Content-Type", "value": "application/json" }
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
 						],
 						"body": {
 							"mode": "raw",
@@ -117,7 +267,8 @@
 					"request": {
 						"method": "POST",
 						"header": [
-							{ "key": "Content-Type", "value": "application/json" }
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
 						],
 						"body": {
 							"mode": "raw",
@@ -151,7 +302,8 @@
 					"request": {
 						"method": "POST",
 						"header": [
-							{ "key": "Content-Type", "value": "application/json" }
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
 						],
 						"body": {
 							"mode": "raw",
@@ -185,7 +337,8 @@
 					"request": {
 						"method": "POST",
 						"header": [
-							{ "key": "Content-Type", "value": "application/json" }
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
 						],
 						"body": {
 							"mode": "raw",
@@ -219,7 +372,8 @@
 					"request": {
 						"method": "POST",
 						"header": [
-							{ "key": "Content-Type", "value": "application/json" }
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
 						],
 						"body": {
 							"mode": "raw",
@@ -253,7 +407,8 @@
 					"request": {
 						"method": "POST",
 						"header": [
-							{ "key": "Content-Type", "value": "application/json" }
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
 						],
 						"body": {
 							"mode": "raw",
@@ -292,7 +447,8 @@
 					"request": {
 						"method": "POST",
 						"header": [
-							{ "key": "Content-Type", "value": "application/json" }
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
 						],
 						"body": {
 							"mode": "raw",
@@ -329,7 +485,8 @@
 					"request": {
 						"method": "POST",
 						"header": [
-							{ "key": "Content-Type", "value": "application/json" }
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
 						],
 						"body": {
 							"mode": "raw",
@@ -363,7 +520,8 @@
 					"request": {
 						"method": "POST",
 						"header": [
-							{ "key": "Content-Type", "value": "application/json" }
+							{ "key": "Content-Type", "value": "application/json" },
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
 						],
 						"body": {
 							"mode": "raw",
@@ -396,7 +554,9 @@
 					],
 					"request": {
 						"method": "GET",
-						"header": [],
+						"header": [
+							{ "key": "Authorization", "value": "Bearer {{token}}" }
+						],
 						"url": {
 							"raw": "{{baseUrl}}/productos",
 							"host": ["{{baseUrl}}"],
