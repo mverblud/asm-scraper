@@ -23,7 +23,9 @@ async function bootstrap(): Promise<void> {
 
   // ── 2. Express ───────────────────────────────────────────
   const app = express();
-  app.use(cors());
+  const corsOptions = { origin: '*', methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'], allowedHeaders: ['Content-Type', 'Authorization'] };
+  app.use(cors(corsOptions));
+  app.options('*', cors(corsOptions)); // preflight para todas las rutas
   app.use(express.json());
 
   // ── 3. Rutas ─────────────────────────────────────────────
